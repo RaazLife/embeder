@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Link Preview</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .link-preview {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .link-preview img {
+            max-width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .link-preview h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .link-preview p {
+            margin-bottom: 10px;
+        }
+
+        .link-preview a {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .link-preview a:hover {
+            text-decoration: underline;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+        .spinner-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Online Link Preview</h1>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="input-group">
+                    <input type="text" id="urlInput" class="form-control" placeholder="Enter URL">
+                    <button class="btn btn-primary" onclick="preview()">Preview</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="previewContainer" class="mt-4"></div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="buttons">
+                    <button class="btn btn-primary mt-4" onclick="downloadHtml()">Download HTML</button>
+                    <button class="btn btn-primary mt-4" onclick="copyHtml()">Copy HTML</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingSpinner" class="spinner-container d-none">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSpinner() {
+            document.getElementById('loadingSpinner').classList.remove('d-none');
+        }
+
+        function hideSpinner() {
+            document.getElementById('loadingSpinner').classList.add('d-none');
+        }
+
+        function preview() {
+            var url = document.getElementById('urlInput').value;
+            var previewContainer = document.getElementById('previewContainer');
+            previewContainer.innerHTML = '';
+
+            showSpinner();
+
+            var proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            var apiUrl = proxyUrl + url;
+
+            fetch(apiUrl)
+                .then(response => response.text())
+                .then(html => {
+                    var title = extractTagContent(html, 'title');
+                    var description = extractMetaTagContent(html, 'description');
+                    var imageUrl = extractImageUrl(html);
+
+                    var linkPreview = document.createElement('div');
+                    linkPreview.classList.add('link-preview');
+
+                    if (imageUrl) {
+                        var image = document.createElement('img');
+                        image.src = imageUrl;
+                        linkPreview.appendChild(image);
+                    }
+
+                    var titleElement = document.createElement('h2');
+                    titleElement.textContent = title;
+                    linkPreview.appendChild(titleElement);
+
+                    var descriptionElement = document.createElement('p');
+                    descriptionElement.textContent = description;
+                    linkPreview.appendChild(descriptionElement);
+
+                    var urlElement = document.createElement('a');
+                    urlElement.href = url;
+                    urlElement.textContent = url;
+                    linkPreview.appendChild(urlElement);
+
+                    previewContainer.appendChild(linkPreview);
+                    hideSpinner();
+                })
+                .catch(error => {
+                    previewContainer.innerHTML = 'Error: Failed to fetch HTML content.';
+                    hideSpinner();
+                });
+        }
+
+        function extractTagContent(html, tag) {
+            var regex = new RegExp(`<${tag}>(.*?)<\/${tag}>`, 'i');
+            var match = html.match(regex);
+            return match ? match[1] : '';
+        }
+
+        function extractMetaTagContent(html, metaTagName) {
+            var regex = new RegExp(`<meta[^>]+name=["']${metaTagName}["'][^>]+content=["'](.*?)["']`, 'i');
+            var match = html.match(regex);
+            return match ? match[1] : '';
+        }
+
+        function extractImageUrl(html) {
+            var regex = /<img.*?src=['"](.*?)['"]/i;
+            var match = html.match(regex);
+            return match ? match[1] : '';
+        }
+
+        function downloadHtml() {
+            var previewContainer = document.getElementById('previewContainer');
+            var htmlCode = previewContainer.innerHTML;
+
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(htmlCode));
+            element.setAttribute('download', 'link_preview.html');
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        function copyHtml() {
+            var previewContainer = document.getElementById('previewContainer');
+            var htmlCode = previewContainer.innerHTML;
+
+            var tempElement = document.createElement('textarea');
+            tempElement.value = htmlCode;
+            document.body.appendChild(tempElement);
+
+            tempElement.select();
+            document.execCommand('copy');
+
+            document.body.removeChild(tempElement);
+
+            alert('HTML code copied to clipboard!');
+        }
+    </script>
+</body>
+</html>
